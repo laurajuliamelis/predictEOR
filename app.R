@@ -10,35 +10,32 @@ load("model_objects.Rdata")
 
 # UI
 ui <- navbarPage(
-  title = div(img(src = "logo_ub.png", height = "40px"), "FarmaPRED-PEP: Early Response Predictor"),
+  title = div(img(src = "logo_ub.png", height = "40px"), "FarmaPRED-PEP: Early Onset Response (EOR) Predictor"),
   theme = "style.css",
-
-  tabPanel("Home",
-    fluidPage(
-      h2("Welcome to the FarmaPRED-PEP Predictor"),
-      p("This application allows clinicians and researchers to estimate the probability of early onset response (EOR) to antipsychotic treatment in patients with first-episode psychosis (FEP)."),
-      p("The model is based on clinical data and was developed within the FarmaPRED-PEP project, funded by Instituto de Salud Carlos III and the European Union."),
-      p("Use the Prediction tab to enter patient data and view predicted probability.")
-    )
-  ),
 
   tabPanel("Prediction",
     sidebarLayout(
       sidebarPanel(
-        numericInput("DUP", "Duration of untreated psychosis (DUP, days)", value = 61, min = 0, max = 800),
-        numericInput("DTP", "Days of treated psychosis (DTP, days)", value = 22, min = 0, max = 400),
-        numericInput("EEAG", "Functioning score (GAF/EEAG)", value = 51, min = 10, max = 100),
-        numericInput("Reserva", "Cognitive reserve (z-score)", value = 0.02, step = 0.1),
-        sliderInput("Insight", "Clinical insight (1 = good, 7 = poor)", min = 1, max = 7, value = 3, step = 1),
-        numericInput("Perseveratives", "Perseverative responses (z-score)", value = -0.63, step = 0.1),
+        numericInput("DUP", "Duration of untreated psychosis (DUP, days)", value = 0, min = 0, max = 800),
+        numericInput("DTP", "Days of treated psychosis (DTP, days)", value = 0, min = 0, max = 400),
+        numericInput("EEAG", "Functioning score (GAF/EEAG)", value = 10, min = 10, max = 100),
+        numericInput("Reserva", "Cognitive reserve (z-score)", value = 0, step = 0.1),
+        sliderInput("Insight", "Insight (1 = good, 7 = poor)", min = 1, max = 7, value = 1, step = 1),
+        numericInput("Perseveratives", "Executive function (z-score)", value = 0, step = 0.1),
         actionButton("predict", "Predict response")
       ),
       mainPanel(
-        textOutput("pred_text"),
+        h2("Welcome to the FarmaPRED-PEP Predictor"),
+        p("This application allows clinicians and researchers to estimate the probability of early onset response (EOR) to antipsychotic treatment in patients with first-episode psychosis (FEP)."),
+        p("Use the left panel to enter patient data and view predicted classification."),
+        
+        h2("Results"),
+        h3("1. Predicted class"),
         uiOutput("class_result"),
-        plotOutput("prob_pie"),
-        plotOutput("density_plot"),
-        plotOutput("force_plot")
+        h3("2. Variable contribution to the predicted probabilty"),
+        plotOutput("force_plot"),
+        h3("3. Probabillity density by class"),
+        plotOutput("density_plot")
       )
     )
   ),
@@ -70,15 +67,11 @@ server <- function(input, output, session) {
     
     prob <- predict(rms.clin, newdata = new_patient, type = "fitted")
     
-    output$pred_text <- renderText({
-      paste0("Probabilidad predicha de respuesta temprana: ", round(prob * 100, 1), "%")
-    })
-    
     output$class_result <- renderUI({
       if (prob > cutoff.clin) {
-        div("Clasificado como EOR", style = "color: white; background-color: forestgreen; padding: 8px; font-weight: bold;")
+        div(paste0("Classified as EOR with a predicted probability of ", round(prob * 100, 2), "%"), style = "color: white; background-color: forestgreen; padding: 8px 10p; font-weight: bold;")
       } else {
-        div("Clasificado como No EOR", style = "color: white; background-color: tomato; padding: 8px; font-weight: bold;")
+        div(paste0("Classified as non-EOR with a predicted probability of ", round(prob * 100, 2), "%"), style = "color: white; background-color: tomato; padding: 8px; font-weight: bold;")
       }
     })
     
