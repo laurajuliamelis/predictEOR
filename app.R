@@ -1,9 +1,12 @@
 
 library(shiny)
+library(pROC)
+library(ggplot2)
+library(shapviz)
 library(rms)
 
 # Load model
-rms.clin <- readRDS("rms.clin.RDS")
+load("model_objects.Rdata")
 
 # UI
 ui <- navbarPage(
@@ -31,9 +34,11 @@ ui <- navbarPage(
         actionButton("predict", "Predict response")
       ),
       mainPanel(
-        h3("Prediction result"),
-        verbatimTextOutput("pred_text"),
-        plotOutput("prob_plot")
+        textOutput("pred_text"),
+        uiOutput("class_result"),
+        plotOutput("prob_pie"),
+        plotOutput("density_plot"),
+        plotOutput("force_plot")
       )
     )
   ),
@@ -66,17 +71,42 @@ server <- function(input, output, session) {
     prob <- predict(rms.clin, newdata = new_patient, type = "fitted")
     
     output$pred_text <- renderText({
-      paste0("Predicted probability of early response: ", round(prob * 100, 1), "%")
+      paste0("Probabilidad predicha de respuesta temprana: ", round(prob * 100, 1), "%")
     })
     
-    output$prob_plot <- renderPlot({
+    output$class_result <- renderUI({
+      if (prob > cutoff.clin) {
+        div("Clasificado como EOR", style = "color: white; background-color: forestgreen; padding: 8px; font-weight: bold;")
+      } else {
+        div("Clasificado como No EOR", style = "color: white; background-color: tomato; padding: 8px; font-weight: bold;")
+      }
+    })
+    
+    output$prob_pie <- renderPlot({
       values <- c(prob, 1 - prob)
-      labels <- c("Early Response", "No Early Response")
-      colors <- if (prob > 0.5) c("forestgreen", "gray80") else c("tomato", "gray80")
+      labels <- c("EOR", "No EOR")
+      colors <- if (prob > cutoff.clin) c("forestgreen", "gray80") else c("tomato", "gray80")
       pie(values,
           labels = paste0(labels, ": ", round(values * 100), "%"),
-          col = colors, border="white",
-          main = "Predicted Probability")
+          col = colors,
+          main = "Distribución de Probabilidad Predicha")
+    })
+    
+    output$density_plot <- renderPlot({
+      ggplot(data.clin.imp, aes(x = Prediction, fill = PredResponse)) +
+        geom_density(alpha = 0.5) +
+        geom_vline(xintercept = prob, color = "black", linetype = "dashed", size = 1.2) +
+        labs(title = "Distribución de Probabilidades Predichas",
+             x = "Probabilidad",
+             fill = "Respuesta") +
+        theme_minimal()
+    })
+    
+    ex.clin <- explain(rms.clin, X = X, pred_wrapper = pfun, newdata = new_patient, nsim = 500, adjust = TRUE, shap_only = FALSE)
+    shv <- shapviz(ex.clin)
+    
+    output$force_plot <- renderPlot({
+      sv_force(shv, row_id = 1)
     })
   })
 }
