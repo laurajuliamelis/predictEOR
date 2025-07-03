@@ -32,7 +32,7 @@ ui <- navbarPage(
                  tags$h3("Patient Inputs", style = "font-weight: bold; color: #2c3e50;"),
                  numericInput("DUP", "Duration of untreated psychosis (DUP)", value = 0, min = 0, max = 800),
                  numericInput("DTP", "Days of treated psychosis (DTP)", value = 0, min = 0, max = 400),
-                 numericInput("EEAG", "Functioning (EEAG score)", value = 10, min = 10, max = 100),
+                 sliderInput("EEAG", "Functioning (EEAG score)", value = 10, min = 10, max = 100, step = 1),
                  numericInput("Reserva", "Cognitive reserve (z-score)", value = 0, step = 0.1),
                  sliderInput("Insight", "Insight (1 = good, 7 = poor)", min = 1, max = 7, value = 1, step = 1),
                  numericInput("Perseveratives", "Executive function (z-score)", value = 0, step = 0.1),
