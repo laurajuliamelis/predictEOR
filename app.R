@@ -18,7 +18,7 @@ bs_global_set(bs_theme(bootswatch = "flatly", base_font = font_google("Roboto"))
 thematic::thematic_shiny()
 
 ## Load model
-load("model_objects.Rdata")
+load("data/model_objects.Rdata")
 
 ## UI
 ui <- navbarPage(
