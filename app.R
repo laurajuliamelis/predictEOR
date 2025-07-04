@@ -149,7 +149,8 @@ server <- function(input, output, session) {
                contrast=F,
                bar_label_size = 5,
                show_annotation = T,
-               annotation_size = 4)
+               annotation_size = 4)+ theme(axis.text = element_text(size=12), 
+                                           axis.title= element_text(size=14, face="bold"))
     })
   })
 }
