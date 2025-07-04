@@ -1,0 +1,10 @@
+name: predictEOR
+title:
+username: farmapred-pep
+account: farmapred-pep
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14950776
+bundleId: 10560236
+url: https://farmapred-pep.shinyapps.io/predictEOR/
+version: 1
