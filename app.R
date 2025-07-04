@@ -36,7 +36,7 @@ ui <- navbarPage(
                  numericInput("Reserva", "Cognitive reserve (z-score)", value = 0, step = 0.1),
                  sliderInput("Insight", "Insight (1 = good, 7 = poor)", min = 1, max = 7, value = 1, step = 1),
                  numericInput("Perseveratives", "Executive function (z-score)", value = 0, step = 0.1),
-                 actionButton("predict", "Predict response", class = "btn btn-primary")
+                 actionButton("predict", "Enter", class = "btn btn-primary")
                ),
                mainPanel(
                  tags$h2("Welcome to the EOR Predictor", style = "color: #3498db; font-weight: bold;"),
@@ -54,12 +54,12 @@ ui <- navbarPage(
                  ),
                  
                  tags$h4("2. Performance of predicted EOR probability in your patient"),
+                 tags$p("This density plot helps interpret the estimated probability of Early Onset Response (EOR) for your patient by comparing it with the distribution of predicted probabilities from the reference dataset. The plot shows the probability densities for patients classified as EOR and non-EOR by the model. Your patient's predicted probability is represented by a vertical line. If this line falls closer to the EOR curve, it suggests a higher similarity to those who responded early. This visual comparison provides contextual insight into the model’s prediction."),
                  plotOutput("density_plot"),
-                 tags$p("This plot shows the distribution of predicted probabilities in the dataset, separated by EOR class. The vertical line represents your patient's predicted probability."),
                  
                  tags$h4("3. Variable contribution to the predicted probability"),
-                 plotOutput("force_plot"),
-                 tags$p("This SHAP force plot shows how each input feature contributes to increasing or decreasing the predicted probability for this specific patient.")
+                 tags$p("The SHAP force plot visually breaks down how each individual predictor contributes to the estimated probability of Early Onset Response (EOR) for your patient. Variables shown in green push the prediction higher (towards EOR), while those in red lower it (towards non-EOR). The size of each bar reflects the strength of that variable’s influence. This allows you to understand not just the outcome, but why the model reached that conclusion—highlighting which patient-specific features are most relevant to the prediction."),
+                 plotOutput("force_plot")
                )
              )
            )
@@ -85,6 +85,9 @@ ui <- navbarPage(
       ),
       br(),
       HTML("For further information visit <a href='https://www.google.com/' target='_blank'>the publication</a> - Code available at <a href='https://github.com/laurajuliamelis/predictEOR' target='_blank'><i class='bi bi-github'></i>GitHub</a>"),
+      actionButton("github_btn", label = NULL, icon = icon("github"), 
+                   onclick = "window.open('https://github.com/laurajuliamelis/predictEOR', '_blank')", 
+                   style = "background-color: transparent; border: none; color: #333; font-size: 20px; margin-top: 10px;"),
       style = "width: 100%; color: black; text-align: center;"
     )
   )
@@ -108,15 +111,15 @@ server <- function(input, output, session) {
       value_box(title = "Patient class", 
                 value = if (prob > cutoff.clin) "EOR" else "Non-EOR" , 
                 theme = value_box_theme(bg = if (prob > cutoff.clin){"#00a86b"} else {"#D22B2B"}, fg = "#FFFFFF"), 
-                showcase = if (prob > cutoff.clin) bsicons::bs_icon("hand-thumbs-up-fill")else bsicons::bs_icon("hand-thumbs-down-fill"), 
+                showcase = if (prob > cutoff.clin) bsicons::bs_icon("person-fill-check")else bsicons::bs_icon("person-fill-x"), 
                 showcase_layout = "left center", 
                 full_screen = F, fill = TRUE, height = NULL)
     })
     
     output$prob_result <- renderUI({
-      value_box(title = "Probability of EOR", value = paste0(round(prob, 2)) , 
+      value_box(title = "Probability of EOR", value = paste0(round(prob*100, 2), "%") , 
                 theme = value_box_theme(bg = "#f4f4f4", fg = "#989898"), 
-                showcase = bsicons::bs_icon("info-circle-fill"), showcase_layout = "left center", 
+                showcase = bsicons::bs_icon("calculator"), showcase_layout = "top right", 
                 full_screen = F, fill = TRUE, height = NULL)
     })
     
@@ -128,17 +131,25 @@ server <- function(input, output, session) {
         geom_vline(aes(xintercept = prob, color = "Patient"), linetype = "solid", size = 1) +
         annotate("text", x = prob + 0.04, y = 3.8, label = paste0("p=", round(prob, 3)),
                  vjust = -0.5, hjust = 0.5, color = "coral", size = 4) +
-        labs(x = "Probability", fill = "Class") +
+        labs(x = "Probability", fill = "Class", y="density") +
         scale_color_manual(name = NULL, values = c("Patient" = "coral")) +
         guides(color = guide_legend(override.aes = list(linetype = "solid"))) +
-        theme_classic()
+        theme_classic() + theme(axis.text = element_text(size=12), 
+                                axis.title= element_text(size=14, face="bold"),
+                                legend.text = element_text(size=12),
+                                legend.title= element_text(size=14, face="bold"))
     })
     
     ex.clin <- explain(rms.clin, X = X, pred_wrapper = pfun, newdata = new_patient, nsim = 500, adjust = TRUE, shap_only = FALSE)
     shv <- shapviz(ex.clin)
     
     output$force_plot <- renderPlot({
-      sv_force(shv, row_id = 1)
+      set.seed(123)
+      sv_force(shv, row_id=1,fill_colors= c("#9ce991", "#e9919c"), 
+               contrast=F,
+               bar_label_size = 5,
+               show_annotation = T,
+               annotation_size = 4)
     })
   })
 }
